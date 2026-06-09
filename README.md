@@ -123,7 +123,7 @@ python src/geo_drift_tracker.py
 6. Copy the live Streamlit URL and paste it here:
 
 ```text
-Live app: add your link here
+Live app: (AI Visiblity Tracker)(https://ai-visiblity-drift-8t9ywwcijebgn3pohxfhhx.streamlit.app/)
 ```
 
 Streamlit Community Cloud connects directly to GitHub repositories and lets you deploy an app in a few minutes. It also uses a secrets system so you can keep API keys out of the repository. [Streamlit Community Cloud docs](https://docs.streamlit.io/deploy/streamlit-community-cloud) [Deploy your app](https://docs.streamlit.io/deploy/streamlit-community-cloud/deploy-your-app) [Secrets management](https://docs.streamlit.io/develop/concepts/connections/secrets-management)
