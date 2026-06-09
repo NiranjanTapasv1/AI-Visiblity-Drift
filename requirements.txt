@@ -1,0 +1,8 @@
+streamlit>=1.28.0
+google-generativeai
+groq
+pandas
+matplotlib
+python-dotenv
+numpy
+tabulate

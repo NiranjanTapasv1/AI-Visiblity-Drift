@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GEO Drift Tracker</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&family=Syne:wght@700;800&display=swap');
+
+    :root {
+      color-scheme: dark;
+      --bg: #07080d;
+      --surface: #13151f;
+      --surface-elevated: rgba(255,255,255,0.06);
+      --border: rgba(255,255,255,0.08);
+      --text: #e8edf8;
+      --muted: #9ca5c3;
+      --primary: #5b6ef5;
+      --success: #22d3a0;
+      --warning: #f59e0b;
+      --danger: #f43f5e;
+      --radius: 18px;
+      --radius-lg: 24px;
+      --shadow: 0 30px 70px rgba(0, 0, 0, 0.35);
+      --transition: 0.24s ease;
+      --font-heading: 'Syne', sans-serif;
+      --font-body: 'DM Sans', sans-serif;
+      --font-code: 'DM Mono', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: var(--font-body);
+      color: var(--text);
+      background: radial-gradient(circle at 18% 15%, rgba(91,110,245,0.18), transparent 18%),
+                  radial-gradient(circle at 86% 24%, rgba(45,212,191,0.12), transparent 20%),
+                  radial-gradient(circle at 52% 92%, rgba(245,158,11,0.1), transparent 22%),
+                  #07080d;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.95' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.05'/%3E%3C/svg%3E");
+      opacity: 0.32;
+      z-index: 0;
+    }
+
+    .page-shell {
+      position: relative;
+      z-index: 1;
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 0 32px 72px;
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      width: 100%;
+      padding: 18px 28px;
+      margin: 0 auto;
+      background: rgba(7,8,13,0.92);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 14px;
+      text-decoration: none;
+      color: var(--text);
+      font-weight: 700;
+      font-family: var(--font-heading);
+      font-size: 1rem;
+    }
+
+    .brand-logo {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, rgba(91,110,245,0.95), rgba(45,212,191,0.9));
+      display: grid;
+      place-items: center;
+      position: relative;
+      box-shadow: 0 18px 28px rgba(91,110,245,0.18);
+    }
+
+    .brand-logo::after {
+      content: '';
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: rgba(255,255,255,0.9);
+      box-shadow: 0 0 14px rgba(255,255,255,0.25);
+    }
+
+    .topbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .live-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(34,211,160,0.22);
+      background: rgba(34,211,160,0.08);
+      color: var(--success);
+      font-size: 0.9rem;
+      font-weight: 600;
+      position: relative;
+    }
+
+    .live-badge::before {
+      content: '';
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--success);
+      animation: pulse 1.8s infinite ease-out;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(0.95); opacity: 0.9; }
+      50% { transform: scale(1.25); opacity: 0.35; }
+      100% { transform: scale(0.95); opacity: 0.9; }
+    }
+
+    .btn {
+      border: none;
+      border-radius: 999px;
+      font-family: var(--font-heading);
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform var(--transition), box-shadow var(--transition), background var(--transition), border-color var(--transition);
+    }
+
+    .btn-primary {
+      padding: 14px 22px;
+      background: var(--primary);
+      color: #fff;
+      box-shadow: 0 16px 32px rgba(91,110,245,0.22);
+    }
+
+    .btn-outline {
+      padding: 14px 22px;
+      background: transparent;
+      color: var(--text);
+      border: 1px solid rgba(255,255,255,0.18);
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+    }
+
+    .hero {
+      min-height: calc(100vh - 96px);
+      display: grid;
+      place-items: center;
+      padding: 80px 0 100px;
+      text-align: center;
+    }
+
+    .hero-content {
+      max-width: 780px;
+      margin: 0 auto;
+    }
+
+    .hero h1 {
+      margin: 0;
+      font-family: var(--font-heading);
+      font-size: clamp(3.8rem, 7vw, 5.4rem);
+      line-height: 0.98;
+      letter-spacing: -0.05em;
+      margin-bottom: 24px;
+    }
+
+    .hero h1 strong {
+      display: block;
+      color: var(--text);
+    }
+
+    .hero p {
+      margin: 0 auto 40px;
+      max-width: 640px;
+      color: var(--muted);
+      font-size: 1.05rem;
+      line-height: 1.9;
+      font-weight: 300;
+    }
+
+    .hero-buttons {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .stats-strip {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 0;
+      border-top: 1px solid rgba(255,255,255,0.08);
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      padding: 28px 0;
+      margin: 0 auto 40px;
+      font-family: var(--font-code);
+    }
+
+    .stat-card {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 0 18px;
+    }
+
+    .stat-card:not(:last-child) {
+      border-right: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .stat-card strong {
+      font-size: 3rem;
+      line-height: 1;
+      display: block;
+    }
+
+    .stat-card span {
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .preview-section {
+      margin-bottom: 52px;
+      display: grid;
+      place-items: center;
+    }
+
+    .preview-card {
+      width: 100%;
+      max-width: 1120px;
+      background: #13151f;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      padding: 28px;
+    }
+
+    .preview-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 26px;
+    }
+
+    .window-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .window-controls span {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      display: block;
+    }
+
+    .window-controls .red { background: #f43f5e; }
+    .window-controls .yellow { background: #f59e0b; }
+    .window-controls .green { background: #22d3a0; }
+
+    .preview-title {
+      font-family: var(--font-code);
+      color: var(--muted);
+      letter-spacing: 0.08em;
+      font-size: 0.88rem;
+      flex: 1;
+      margin-left: 14px;
+    }
+
+    .preview-run {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.04);
+      color: var(--text);
+      padding: 12px 18px;
+      font-family: var(--font-heading);
+      cursor: pointer;
+      transition: transform var(--transition), background var(--transition), border-color var(--transition);
+    }
+
+    .preview-run:hover {
+      transform: translateY(-1px);
+      background: rgba(91,110,245,0.14);
+      border-color: rgba(91,110,245,0.22);
+    }
+
+    .preview-run .icon {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--success);
+      box-shadow: 0 0 12px rgba(34,211,160,0.35);
+    }
+
+    .preview-metrics {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 18px;
+      margin-bottom: 28px;
+    }
+
+    .metric-box {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 16px;
+      padding: 20px 22px;
+      transition: transform var(--transition), border-color var(--transition);
+    }
+
+    .metric-box:hover {
+      transform: translateY(-3px);
+      border-color: rgba(255,255,255,0.16);
+    }
+
+    .metric-box span {
+      display: block;
+      color: var(--muted);
+      font-size: 0.95rem;
+      margin-bottom: 12px;
+    }
+
+    .metric-box strong {
+      display: block;
+      font-size: 2.2rem;
+      line-height: 1;
+      letter-spacing: -0.04em;
+    }
+
+    .preview-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: var(--font-code);
+    }
+
+    .preview-table th,
+    .preview-table td {
+      padding: 14px 12px;
+      text-align: left;
+    }
+
+    .preview-table th {
+      color: var(--muted);
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.11em;
+      font-weight: 600;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .preview-table tr {
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .preview-table td:first-child {
+      font-family: var(--font-heading);
+      font-size: 0.96rem;
+      color: var(--text);
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 8px 12px;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: capitalize;
+    }
+
+    .status-pill.stable { background: rgba(34,211,160,0.15); color: var(--success); }
+    .status-pill.moderate { background: rgba(245,158,11,0.15); color: var(--warning); }
+    .status-pill.volatile { background: rgba(244,63,94,0.15); color: var(--danger); }
+
+    .stability-track {
+      width: 100%;
+      height: 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.05);
+      overflow: hidden;
+    }
+
+    .stability-fill {
+      height: 100%;
+      border-radius: 999px;
+    }
+
+    .features-section {
+      margin-bottom: 52px;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 20px;
+    }
+
+    .feature-card {
+      background: #13151f;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      transition: transform var(--transition), border-color var(--transition), box-shadow var(--transition);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .feature-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at top left, rgba(91,110,245,0.15), transparent 40%);
+      opacity: 0;
+      transition: opacity var(--transition);
+      pointer-events: none;
+    }
+
+    .feature-card:hover {
+      transform: translateY(-3px);
+      border-color: rgba(255,255,255,0.18);
+      box-shadow: 0 22px 50px rgba(0,0,0,0.18);
+    }
+
+    .feature-card:hover::before {
+      opacity: 1;
+    }
+
+    .feature-icon {
+      width: 46px;
+      height: 46px;
+      border-radius: 14px;
+      display: grid;
+      place-items: center;
+      background: rgba(255,255,255,0.05);
+      margin-bottom: 18px;
+      font-size: 1.1rem;
+    }
+
+    .feature-card h3 {
+      margin: 0 0 12px;
+      font-family: var(--font-heading);
+      font-size: 1.05rem;
+      line-height: 1.3;
+    }
+
+    .feature-card p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.8;
+      font-size: 0.95rem;
+    }
+
+    .workflow-section {
+      margin-bottom: 52px;
+    }
+
+    .workflow-top {
+      display: flex;
+      gap: 18px;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      position: relative;
+      padding: 34px 0 12px;
+    }
+
+    .workflow-top::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 6%;
+      right: 6%;
+      height: 1px;
+      background: rgba(255,255,255,0.08);
+      z-index: 0;
+    }
+
+    .step-card {
+      position: relative;
+      z-index: 1;
+      background: #13151f;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 24px 22px;
+      min-width: 230px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      transition: transform var(--transition), border-color var(--transition);
+    }
+
+    .step-card:hover {
+      transform: translateY(-3px);
+      border-color: rgba(255,255,255,0.16);
+    }
+
+    .step-number {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      border: 1px solid rgba(255,255,255,0.12);
+      display: grid;
+      place-items: center;
+      color: var(--primary);
+      font-family: var(--font-code);
+      font-weight: 700;
+    }
+
+    .step-card h4 {
+      margin: 0;
+      font-family: var(--font-heading);
+      font-size: 1rem;
+    }
+
+    .step-card p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.75;
+      font-size: 0.94rem;
+    }
+
+    .terminal-section {
+      margin-bottom: 52px;
+    }
+
+    .terminal-card {
+      background: #050608;
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 22px;
+      padding: 28px;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.02);
+    }
+
+    .terminal-header {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 22px;
+    }
+
+    .terminal-header span {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .terminal-header .red { background: #f87171; }
+    .terminal-header .yellow { background: #fbbf24; }
+    .terminal-header .green { background: #34d399; }
+
+    .terminal-body {
+      font-family: var(--font-code);
+      font-size: 0.95rem;
+      line-height: 1.85;
+      color: #dbe1f0;
+    }
+
+    .terminal-line {
+      margin: 0 0 12px;
+      opacity: 0.9;
+    }
+
+    .terminal-line .prompt { color: #60a5fa; }
+    .terminal-line .command { color: #e2e8f0; }
+    .terminal-line .comment { color: #7c88a3; }
+    .terminal-line .success { color: #22d3a0; }
+    .terminal-line .warning { color: #f59e0b; }
+
+    .footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 28px 0 12px;
+      border-top: 1px solid rgba(255,255,255,0.08);
+      color: var(--muted);
+      font-size: 0.95rem;
+      flex-wrap: wrap;
+    }
+
+    .footer .pills {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .footer .pill {
+      padding: 10px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.04);
+    }
+
+    .reveal {
+      opacity: 0;
+      transform: translateY(28px);
+      transition: opacity 0.65s ease, transform 0.65s ease;
+    }
+
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    @media (max-width: 1024px) {
+      .page-shell { padding: 0 24px 60px; }
+      .preview-card { padding: 24px; }
+      .stats-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .stat-card:not(:last-child) { border-right: none; }
+      .stat-card:nth-child(1), .stat-card:nth-child(2) { border-bottom: 1px solid rgba(255,255,255,0.08); }
+      .preview-top { flex-direction: column; align-items: flex-start; }
+      .workflow-top::before { left: 4%; right: 4%; }
+    }
+
+    @media (max-width: 800px) {
+      .topbar { flex-direction: column; align-items: stretch; padding: 18px 20px; }
+      .hero { min-height: auto; padding: 80px 0 72px; }
+      .hero h1 { font-size: clamp(3rem, 9vw, 4.2rem); }
+      .hero p { font-size: 1rem; }
+      .hero-buttons { flex-direction: column; }
+      .stats-strip { grid-template-columns: 1fr; padding: 24px 0; }
+      .stat-card { padding: 14px 0; }
+      .stat-card:not(:last-child) { border-bottom: 1px solid rgba(255,255,255,0.08); }
+      .preview-metrics { grid-template-columns: 1fr; }
+      .features-grid { grid-template-columns: 1fr; }
+      .workflow-top { flex-direction: column; align-items: stretch; }
+      .step-card { width: 100%; }
+    }
+
+    @media (max-width: 600px) {
+      .page-shell { padding: 0 18px 48px; }
+      .topbar { padding: 16px 18px; }
+      .brand { font-size: 0.95rem; }
+      .live-badge { padding: 10px 12px; font-size: 0.85rem; }
+      .btn { width: 100%; justify-content: center; }
+      .hero { padding-top: 60px; }
+      .preview-card { padding: 20px; }
+      .preview-table th, .preview-table td { padding: 12px 10px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="topbar reveal">
+      <a class="brand" href="#hero">
+        <span class="brand-logo"></span>
+        GEO Drift
+      </a>
+      <div class="topbar-actions">
+        <span class="live-badge">Live</span>
+        <button class="btn btn-primary" id="run-analysis-header">Run Analysis</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero reveal" id="hero">
+        <div class="hero-content">
+          <h1><strong>Stop trusting single snapshots.</strong><strong>Measure the drift.</strong></h1>
+          <p>AI gives different answers every time. We measure exactly how much — and which brands you can actually trust.</p>
+          <div class="hero-buttons">
+            <button class="btn btn-primary" id="view-dashboard">View Dashboard</button>
+            <button class="btn btn-outline" id="see-how">See How It Works</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="stats-strip reveal">
+        <div class="stat-card">
+          <strong>2</strong>
+          <span>AI Engines</span>
+        </div>
+        <div class="stat-card">
+          <strong>5×</strong>
+          <span>Runs per Prompt</span>
+        </div>
+        <div class="stat-card">
+          <strong>0–1</strong>
+          <span>Stability Score</span>
+        </div>
+        <div class="stat-card">
+          <strong>$0</strong>
+          <span>Cost to Run</span>
+        </div>
+      </section>
+
+      <section class="preview-section reveal" id="dashboard-preview">
+        <div class="preview-card">
+          <div class="preview-top">
+            <div class="window-controls">
+              <span class="red"></span>
+              <span class="yellow"></span>
+              <span class="green"></span>
+            </div>
+            <div class="preview-title">geo_drift_tracker · results/drift_results.csv</div>
+            <button class="preview-run" id="preview-run"><span class="icon"></span>Run</button>
+          </div>
+
+          <div class="preview-metrics">
+            <div class="metric-box">
+              <span>Brands Tracked</span>
+              <strong>12</strong>
+            </div>
+            <div class="metric-box">
+              <span>API Calls</span>
+              <strong id="api-count">0</strong>
+            </div>
+            <div class="metric-box">
+              <span>Volatile Brands</span>
+              <strong>4</strong>
+            </div>
+          </div>
+
+          <div class="table-wrapper">
+            <table class="preview-table">
+              <thead>
+                <tr>
+                  <th>Brand</th>
+                  <th>Frequency</th>
+                  <th>Avg Position</th>
+                  <th>Stability</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="brand-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="features-section reveal" id="features">
+        <div class="features-grid">
+          <article class="feature-card">
+            <div class="feature-icon">📊</div>
+            <h3>Stability Scoring</h3>
+            <p>Every brand receives a 0–1 score that captures frequency and rank consistency, so you can separate reliable signal from AI noise.</p>
+          </article>
+
+          <article class="feature-card">
+            <div class="feature-icon">☀️</div>
+            <h3>Dual Engine</h3>
+            <p>Compare Gemini and Groq responses across repeated queries. Cross-engine coverage reveals which brands drift the most in real time.</p>
+          </article>
+
+          <article class="feature-card">
+            <div class="feature-icon">✏️</div>
+            <h3>Sentiment Parsing</h3>
+            <p>Brand mentions are tagged with positive, neutral, or negative context using transparent keyword logic — not a black-box API.</p>
+          </article>
+
+          <article class="feature-card">
+            <div class="feature-icon">💬</div>
+            <h3>Free Tier</h3>
+            <p>Designed for zero-cost experimentation. Runs work on free APIs only, so you can demonstrate drift without surprise fees.</p>
+          </article>
+
+          <article class="feature-card">
+            <div class="feature-icon">{}‍</div>
+            <h3>Extensible</h3>
+            <p>The architecture is built to add new providers without refactoring. One registry entry lets you scale to paid engines fast.</p>
+          </article>
+
+          <article class="feature-card">
+            <div class="feature-icon">📄</div>
+            <h3>CSV Export</h3>
+            <p>Full results export to pandas CSV and chart-ready output. Shareable drift reports and side-by-side engine comparison are ready instantly.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="workflow-section reveal" id="how-it-works">
+        <div class="workflow-top">
+          <article class="step-card">
+            <div class="step-number">01</div>
+            <h4>Query N×</h4>
+            <p>Send each prompt to Gemini and Groq multiple times to surface natural response variance.</p>
+          </article>
+
+          <article class="step-card">
+            <div class="step-number">02</div>
+            <h4>Parse Brands</h4>
+            <p>Extract brand mentions, positions, and sentiment from raw list responses with predictable parsing logic.</p>
+          </article>
+
+          <article class="step-card">
+            <div class="step-number">03</div>
+            <h4>Aggregate</h4>
+            <p>Combine frequency, average position, and deviation metrics across runs and engines for every brand.</p>
+          </article>
+
+          <article class="step-card">
+            <div class="step-number">04</div>
+            <h4>Score Stability</h4>
+            <p>Compute a final stability score that rewards both consistency and repeatable ranking.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="terminal-section reveal">
+        <div class="terminal-card">
+          <div class="terminal-header">
+            <span class="red"></span>
+            <span class="yellow"></span>
+            <span class="green"></span>
+          </div>
+          <div class="terminal-body">
+            <p class="terminal-line"><span class="prompt">➜</span> <span class="command">cd ~/geo_drift_tracker</span></p>
+            <p class="terminal-line"><span class="prompt">➜</span> <span class="command">python3 -m venv .venv</span></p>
+            <p class="terminal-line"><span class="comment"># activate environment</span></p>
+            <p class="terminal-line"><span class="command">source .venv/bin/activate</span></p>
+            <p class="terminal-line"><span class="command">pip install -r requirements.txt</span></p>
+            <p class="terminal-line"><span class="success">✔ Setup complete</span></p>
+            <p class="terminal-line"><span class="command">python app.py</span></p>
+            <p class="terminal-line"><span class="warning">⚠ Watching for drift in real time</span></p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer reveal">
+      <div>GEO Drift Tracker · Built for Peec AI</div>
+      <div class="pills">
+        <span class="pill">Python 3.11</span>
+        <span class="pill">Free APIs</span>
+        <span class="pill">Open source</span>
+      </div>
+    </footer>
+  </div>
+
+  <script>
+    const brands = [
+      { name: 'HubSpot', freq: '100%', pos: '1.4', stability: 0.92, verdict: 'stable' },
+      { name: 'Salesforce', freq: '90%', pos: '2.1', stability: 0.78, verdict: 'stable' },
+      { name: 'Pipedrive', freq: '80%', pos: '3.2', stability: 0.66, verdict: 'moderate' },
+      { name: 'Zoho CRM', freq: '70%', pos: '3.8', stability: 0.58, verdict: 'moderate' },
+      { name: 'Monday.com', freq: '60%', pos: '4.5', stability: 0.32, verdict: 'volatile' },
+      { name: 'Notion', freq: '50%', pos: '5.1', stability: 0.24, verdict: 'volatile' },
+      { name: 'Freshsales', freq: '40%', pos: '4.2', stability: 0.28, verdict: 'volatile' },
+      { name: 'Asana', freq: '30%', pos: '3.0', stability: 0.19, verdict: 'volatile' },
+    ];
+
+    const tableBody = document.getElementById('brand-table-body');
+    const colorMap = { stable: '#22d3a0', moderate: '#f59e0b', volatile: '#f43f5e' };
+
+    brands.forEach((brand) => {
+      const row = document.createElement('tr');
+      const fillPercent = Math.round(brand.stability * 100);
+      row.innerHTML = `
+        <td>${brand.name}</td>
+        <td>${brand.freq}</td>
+        <td>${brand.pos}</td>
+        <td>
+          <div class="stability-track"><div class="stability-fill" style="width:${fillPercent}%; background:${colorMap[brand.verdict]};"></div></div>
+        </td>
+        <td><span class="status-pill ${brand.verdict}">${brand.verdict}</span></td>
+      `;
+      tableBody.appendChild(row);
+    });
+
+    const previewRun = document.getElementById('preview-run');
+    const apiCount = document.getElementById('api-count');
+    let isRunning = false;
+
+    previewRun.addEventListener('click', () => {
+      if (isRunning) return;
+      isRunning = true;
+      let value = 0;
+      const target = 30;
+      const interval = 2000 / target;
+      const timer = setInterval(() => {
+        value += 1;
+        apiCount.textContent = value;
+        if (value >= target) {
+          clearInterval(timer);
+          previewRun.innerHTML = '<span class="icon"></span>Done';
+          previewRun.style.background = 'rgba(34,211,160,0.16)';
+          previewRun.style.borderColor = 'rgba(34,211,160,0.24)';
+        }
+      }, interval);
+    });
+
+    document.getElementById('view-dashboard').addEventListener('click', () => {
+      document.getElementById('dashboard-preview').scrollIntoView({ behavior: 'smooth' });
+    });
+
+    document.getElementById('see-how').addEventListener('click', () => {
+      document.getElementById('how-it-works').scrollIntoView({ behavior: 'smooth' });
+    });
+
+    document.getElementById('run-analysis-header').addEventListener('click', () => {
+      document.getElementById('dashboard-preview').scrollIntoView({ behavior: 'smooth' });
+    });
+
+    const revealItems = document.querySelectorAll('.reveal');
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.15 });
+
+    revealItems.forEach((item) => observer.observe(item));
+  </script>
+</body>
+</html>
