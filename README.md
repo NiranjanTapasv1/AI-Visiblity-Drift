@@ -4,6 +4,8 @@ GEO Drift Tracker is a simple way to see how AI answers move around when the sam
 
 It helps you spot when a brand looks strong in one answer but weak in another. It also shows when two AI models disagree with each other. That matters because one good looking answer is not always a reliable signal.
 
+Live Demo: https://ai-visiblity-drift-8t9ywwcijebgn3pohxfhhx.streamlit.app/
+
 ## What this project does
 
 The app asks the same question several times, sends it to Gemini and Groq, and then compares the answers.
@@ -122,9 +124,6 @@ python src/geo_drift_tracker.py
 5. Deploy the app from the GitHub repository in Streamlit Community Cloud.
 6. Copy the live Streamlit URL and paste it here:
 
-```text
-Live app: (AI Visiblity Tracker)(https://ai-visiblity-drift-8t9ywwcijebgn3pohxfhhx.streamlit.app/)
-```
 
 Streamlit Community Cloud connects directly to GitHub repositories and lets you deploy an app in a few minutes. It also uses a secrets system so you can keep API keys out of the repository. [Streamlit Community Cloud docs](https://docs.streamlit.io/deploy/streamlit-community-cloud) [Deploy your app](https://docs.streamlit.io/deploy/streamlit-community-cloud/deploy-your-app) [Secrets management](https://docs.streamlit.io/develop/concepts/connections/secrets-management)
 
